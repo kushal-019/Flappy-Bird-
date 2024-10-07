@@ -17,7 +17,9 @@ public class App{
 
         frame.add(flappybird);
         frame.pack();
-        // ṭo avoid title included in defined height 
+        // ṭo avoid title included in defined height
+
+        flappybird.requestFocus(); 
         frame.setVisible(true);
     }
 }
