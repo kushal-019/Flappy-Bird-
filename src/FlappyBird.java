@@ -44,6 +44,8 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener{
 
     Timer gameLoop;
     Timer placepipeTimer;
+    boolean gameover = false;
+    double score = 0;
 
 
     // pipes
@@ -68,9 +70,18 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener{
 
     ArrayList<Pipe>pipes;
 
+    Random random = new Random();
+
     public void placePipes(){
-        Pipe topPipe = new Pipe(topPipeImg);
+        int randomPipeY =(int)(pipeY - pipeHeight/4- Math.random()*(pipeHeight/2));
+        int openSpace = boardHeight/4;
+
+        Pipe topPipe = new Pipe(topPipeImg); 
+        topPipe.y = randomPipeY;
         pipes.add(topPipe);
+        Pipe bottompipe = new Pipe(bottomPipeImg); 
+        bottompipe.y = topPipe.y + pipeHeight + openSpace ;
+        pipes.add(bottompipe);
     }
 
 
@@ -123,6 +134,16 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener{
         }
 
 
+        // Game Over and score updation
+        g.setColor(Color.white);
+        g.setFont(new Font("Arial" , Font.PLAIN , 32));
+        if(gameover){
+            g.drawString("Game Over " + String.valueOf((int)score) , 10   ,35);
+        }
+        else{
+            g.drawString(String.valueOf((int)score) , 10 , 35);
+        }
+
     }
 
     public void move(){
@@ -135,13 +156,33 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener{
         for(int i=0;i<pipes.size();i++){
             Pipe pipe = pipes.get(i);
             pipe.x += velocityX;
+
+            // Score Incrementation 
+            if(!pipe.passed && bird.x > pipe.x + pipe.width){
+                pipe.passed = true;
+                score += 0.5;
+            }
+            // Checking collision
+            if(collision(bird , pipe)){
+                gameover = true;
+            }
         }
+        if(bird.y > boardHeight){gameover = true;}
     }
     // Over riding to prevent default behave and calling repaint() to keep updated 
     @Override 
     public void actionPerformed(ActionEvent e ){
         move();
         repaint();
+        
+        if(gameover == true){
+            placepipeTimer.stop();   
+            gameLoop.stop();
+        }
+    }
+    public boolean collision(Bird a , Pipe b){
+        // Conditions for collision
+        return a.x < b.x + b.width && a.x + a.width >b.x && a.y < b.y + b.height && a.y + a.height > b.y ;
     }
 
     @Override 
