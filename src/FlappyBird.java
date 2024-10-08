@@ -3,6 +3,9 @@ import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Random;
 import javax.swing.*;
+import javax.sound.sampled.*;
+import java.io.File;
+import java.io.IOException;
 
 public class FlappyBird extends JPanel implements ActionListener, KeyListener{
     int boardWidth = 360;
@@ -47,6 +50,8 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener{
     boolean gameover = false;
     double score = 0;
 
+    Clip pointClip;
+    Clip dieClip;
 
     // pipes
     int pipeX = boardWidth;
@@ -103,6 +108,11 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener{
         pipes = new ArrayList<Pipe>();
         
         gameLoop = new Timer(1000/60 , this);
+
+         if (!loadSounds()) {
+            System.out.println("Error loading sounds. The game may not have sound effects.");
+        }
+
         placepipeTimer = new Timer(1500 , new ActionListener(){
             @Override
             public void actionPerformed(ActionEvent e){
@@ -112,6 +122,33 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener{
         gameLoop.start();
         placepipeTimer.start();
 
+    }
+
+    private boolean loadSounds() {
+        try {
+            // Check if the resource is available
+            if (getClass().getResourceAsStream("point.wav") == null) {
+                System.out.println("point.wav not found");
+            }
+            if (getClass().getResourceAsStream("die.wav") == null) {
+                System.out.println("die.wav not found");
+            }
+    
+            // Load point sound
+            AudioInputStream pointStream = AudioSystem.getAudioInputStream(getClass().getResourceAsStream("point.wav"));
+            pointClip = AudioSystem.getClip();
+            pointClip.open(pointStream);
+    
+            // Load die sound
+            AudioInputStream dieStream = AudioSystem.getAudioInputStream(getClass().getResourceAsStream("die.wav"));
+            dieClip = AudioSystem.getClip();
+            dieClip.open(dieStream);
+    
+            return true; // Success
+        } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+            e.printStackTrace();
+            return false; // Failure
+        }
     }
 
     public void paintComponent(Graphics g){
@@ -156,15 +193,24 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener{
         for(int i=0;i<pipes.size();i++){
             Pipe pipe = pipes.get(i);
             pipe.x += velocityX;
-
-            // Score Incrementation 
-            if(!pipe.passed && bird.x > pipe.x + pipe.width){
+            
+            if (!pipe.passed && bird.x > pipe.x + pipe.width) {
                 pipe.passed = true;
-                score += 0.5;
+                score += 0.5; // Increment score
+                if (pointClip != null) {
+                    pointClip.setFramePosition(0); // Rewind to the beginning
+                    pointClip.start(); // Play sound
+                }
             }
-            // Checking collision
-            if(collision(bird , pipe)){
+
+            // Check for collision
+            if (collision(bird, pipe)) {
                 gameover = true;
+            }
+
+            // Remove pipes that have gone off the screen
+            if (pipe.x + pipe.width < 0) {
+                pipes.remove(pipe);
             }
         }
         if(bird.y > boardHeight){gameover = true;}
@@ -178,6 +224,10 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener{
         if(gameover == true){
             placepipeTimer.stop();   
             gameLoop.stop();
+            if(dieClip != null){
+                dieClip.setFramePosition(0);
+                dieClip.start();
+            }
         }
     }
     public boolean collision(Bird a , Pipe b){
@@ -189,6 +239,17 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener{
     public void keyPressed(KeyEvent e ){
         if(e.getKeyCode() == KeyEvent.VK_SPACE){
             velocityY = -9;
+
+            if(gameover){
+                bird.y = birdY;
+                velocityY = 0;
+                pipes.clear();
+                score = 0;
+                gameover  =false;
+                gameLoop.start();
+                placepipeTimer.start();
+
+            }
         }
     }
     @Override 
